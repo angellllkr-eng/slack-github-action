@@ -1,0 +1,29 @@
+name: Frontier
+on:
+  push:
+    branches: [main, 'frontier/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontier-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: {node-version: 24}
+      - name: Detect and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package.json ]; then
+            if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile && pnpm run build --if-present && pnpm test --if-present;
+            elif [ -f yarn.lock ]; then corepack enable && yarn install --immutable && yarn build --if-present && yarn test --if-present;
+            elif [ -f package-lock.json ]; then npm ci && npm run build --if-present && npm test --if-present;
+            else npm install && npm run build --if-present && npm test --if-present; fi
+          else echo 'No Node package detected; validation complete.'; fi
